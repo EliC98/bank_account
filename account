@@ -1,0 +1,126 @@
+import hashlib
+import os.path
+accounts=()
+
+salts=[]
+
+def write_salts():
+	file=open("salts.txt", "w")
+	for i in range(0,26):
+		file.write(str(random.randint(0,1000)+ "\n"))
+
+def get_salt():
+	file=open("salts.txt", "r")
+	for line in file:
+		salts.append(line)
+	print(salts)
+
+def salt_password(password):
+	indexA=ord('a')
+	password=password.lower()
+	last_letter = password[-1]
+	if not last_letter.isalnum():
+		index=0
+	elif last_letter.isnumeric():
+		index=int(last_letter)
+	else:
+		indexL = ord(last_letter)
+		index = indexL - indexA
+	salt=salts[index]
+	return salt
+
+def read_file():
+	if not os.path.isfile("accounts.txt"):
+		return
+	f=open("accounts.txt","r")
+	for line in f:
+		print(line)
+		words = line.split(" ")
+		words.pop()
+		username = words[0]
+		password = words[1]
+		PIN=words[2]
+		balance=int(words [3])
+		accounts.update({words[0] : [password, PIN, balance]})
+	f.close()
+
+def write_file():
+	f=open("accounts.txt", "w")
+	for username in accounts:
+		f.write(username + " ")
+		info=accounts[username] 
+		for item in info:
+			f.write(str(item)+ " ")
+		f.write("\n")
+	f.close()
+
+def hasher(password):
+	b=bytes(password, 'utf-8')
+	m=hashlib.sha256(b)
+	m=m.hexdigest()
+	return m
+
+accounts= {}
+
+def login():
+	print("Login")
+	username = input("please enter your username.")
+	password = input("please enter your password.")
+	password=hasher(password)
+	if not accounts.get(username):
+		print("please enter a valid username.")
+		return
+	actual_password = accounts[username][0] 
+	message = input("press 'V' to view balance or 'D' to deposit or T' to transfer money into another account.")
+	password=input("please enter your password.")
+	password=password+salt_password(password)
+	password=hasher(password)
+	for i in range (0,6):
+		if i == 5:
+			print("locked out")
+		elif password == actual_password:
+			print("welcome," + username + "!")
+			if message =='V':
+				print("your balance is" + str(accounts[username][2]))
+			elif message== 'D':
+				amt = int(input("Enter the amount you would like to deposit."))
+				accounts[username][2] += amt
+				print("Your account balance is now " + str(accounts[username][2]))
+			elif message == 'T':
+				friend = input("enter the username of the account you would like to transfer money to.")
+				if not accounts.get(friend):
+					print("please enter a valid username.")
+					break
+				amt = int(input("Enter the amount you would like to transfer."))
+				accounts[username][2] -= amt
+				accounts[friend][2] += amt
+				print("your account balance is now " + str(accounts[username][2]))
+				print("their account balance is now " + str(accounts[friend][2]))
+			break
+		else:
+			print("Wrong password- try again")
+			password=input("please enter your password.")
+			password=password+salt_password(password)
+			password=hasher(password)
+
+get_salt()
+salt_password("tac")
+read_file()
+message = input("enter 'C' to create a new bank account, or press L to login.")
+while message != 'Q':
+	if message =='C':
+		username=input("Create a username.")
+		while accounts.get(username):
+			username=input("username taken- please enter another:")
+		password=input("Create a password.")
+		password=password + salt_password(password)
+		password = hasher(password)
+		PIN = input("Please enter a PIN to secure your info.")
+		accounts.update({username : [password, PIN, 0]})
+	elif message == 'L':
+		login()
+	else:
+		print("Please enter a valid option")
+	message = input("enter 'C' to create a new bank account, or press L to login.")
+
+write_file()
